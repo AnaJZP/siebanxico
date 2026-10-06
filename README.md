@@ -247,7 +247,7 @@ pytest -m red       # verifica el catálogo de alias contra Banxico (sin token)
 
 Ana Lorena Jiménez Preciado · Escuela Superior de Economía, Instituto Politécnico Nacional.
 
-## Licencia
+## Datos
 
-MIT. Los datos pertenecen a Banco de México y están sujetos a sus
+Los datos pertenecen a Banco de México y están sujetos a sus
 [términos de uso](https://www.banxico.org.mx/SieAPIRest/service/v1/doc/salvedad).
