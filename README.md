@@ -18,7 +18,7 @@ sie.inflacion(df["inpc"]).tail()
 Se instala directamente desde GitHub (también en Google Colab, anteponiendo `!`):
 
 ```bash
-pip install "siebanxico[analisis] @ git+https://github.com/AnaJZP/BanxicoLab.git"
+pip install "siebanxico[analisis] @ git+https://github.com/AnaJZP/siebanxico.git"
 ```
 
 Para desarrollar, clona el repositorio e instala en modo editable:
@@ -217,8 +217,10 @@ sie.evaluar_pronosticos(inpc, desde="2012-01-01")  # error fuera de muestra vs. 
 
 ## Documentación
 
-La guía completa y la referencia de cada función están en `docs/`. Para verla
-como sitio web:
+La guía completa y la referencia de cada función están en
+**<https://anajzp.github.io/siebanxico/>**.
+
+Para verla en tu computadora mientras la editas:
 
 ```bash
 pip install -e ".[docs]"

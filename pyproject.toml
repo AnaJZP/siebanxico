@@ -35,9 +35,9 @@ dev = ["pytest>=8", "ruff>=0.6", "statsmodels>=0.14", "matplotlib>=3.7"]
 docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
 
 [project.urls]
-Repositorio = "https://github.com/AnaJZP/BanxicoLab"
-Documentacion = "https://github.com/AnaJZP/BanxicoLab/tree/main/docs"
-Problemas = "https://github.com/AnaJZP/BanxicoLab/issues"
+Repositorio = "https://github.com/AnaJZP/siebanxico"
+Documentacion = "https://anajzp.github.io/siebanxico/"
+Problemas = "https://github.com/AnaJZP/siebanxico/issues"
 
 [project.scripts]
 siebanxico = "siebanxico.cli:main"

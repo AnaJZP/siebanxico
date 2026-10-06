@@ -1,0 +1,23 @@
+name: Publicar en PyPI
+
+# Se ejecuta al publicar un «release» en GitHub. No usa contraseñas ni tokens:
+# PyPI confía en este flujo por «Trusted Publishing» (hay que darlo de alta una
+# vez en https://pypi.org/manage/account/publishing/ con el entorno «pypi»).
+on:
+  release:
+    types: [published]
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
