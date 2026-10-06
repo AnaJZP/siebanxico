@@ -1,0 +1,76 @@
+"""Interfaz de línea de comandos: ``siebanxico --help``."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+import pandas as pd
+
+from . import __version__
+from .alias import catalogo
+from .cliente import Banxico
+from .errores import BanxicoError
+from .token import borrar_token, guardar_token, ruta_token
+
+
+def _parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="siebanxico", description="Series del SIE de Banco de México desde la terminal."
+    )
+    p.add_argument("--version", action="version", version=f"siebanxico {__version__}")
+    sub = p.add_subparsers(dest="comando", required=True)
+
+    t = sub.add_parser("token", help="guarda tu token de forma segura (no se muestra al escribir)")
+    t.add_argument("--borrar", action="store_true", help="elimina el token guardado")
+
+    sub.add_parser("catalogo", help="lista los alias de series disponibles")
+
+    b = sub.add_parser("buscar", help="busca series por texto (no requiere token)")
+    b.add_argument("texto")
+
+    m = sub.add_parser("metadatos", help="título, periodicidad y cobertura de las series")
+    m.add_argument("series", nargs="+")
+
+    d = sub.add_parser("descargar", help="descarga series a CSV")
+    d.add_argument("series", nargs="+", help="identificadores (SF43718) o alias (fix)")
+    d.add_argument("--inicio", help="AAAA-MM-DD")
+    d.add_argument("--fin", help="AAAA-MM-DD")
+    d.add_argument("--incremento", choices=["mensual", "anual", "acumulado"])
+    d.add_argument("-o", "--salida", help="archivo CSV; si se omite se imprime en pantalla")
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    pd.set_option("display.width", 200, "display.max_colwidth", 90, "display.max_rows", 200)
+    try:
+        if args.comando == "token":
+            if args.borrar:
+                print("Token eliminado." if borrar_token() else "No había token guardado.")
+            else:
+                guardar_token()
+                print(f"Token guardado en {ruta_token()} (solo legible por tu usuario).")
+        elif args.comando == "catalogo":
+            print(catalogo().to_string())
+        elif args.comando == "buscar":
+            print(Banxico().buscar(args.texto, limite=None).to_string(index=False))
+        elif args.comando == "metadatos":
+            print(Banxico().metadatos(args.series).to_string())
+        elif args.comando == "descargar":
+            df = Banxico().descargar(args.series, args.inicio, args.fin, incremento=args.incremento)
+            if args.salida:
+                df.to_csv(args.salida)
+                print(f"{len(df):,} filas × {df.shape[1]} series → {args.salida}", file=sys.stderr)
+            else:
+                df.to_csv(sys.stdout)
+    except (BanxicoError, ValueError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

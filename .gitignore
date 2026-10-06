@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+site/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+# Nunca subas tu token
+.env
+*.token
+
+# Versión previa del seminario, anterior a la librería (la vigente está en examples/)
+/Transformaciones_Variables_Banxico.ipynb

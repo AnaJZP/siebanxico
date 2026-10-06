@@ -1,0 +1,54 @@
+site_name: siebanxico
+site_description: Series del SIE de Banco de México listas para analizar en Python
+docs_dir: docs
+repo_url: https://github.com/AnaJZP/BanxicoLab
+site_author: Ana Lorena Jiménez Preciado
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-night, name: Modo oscuro }
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-sunny, name: Modo claro }
+  features: [content.code.copy, navigation.sections, toc.follow]
+extra_css: [estilo.css]
+nav:
+  - Inicio: index.md
+  - Token: token.md
+  - Descargar series: descarga.md
+  - Transformaciones: transformaciones.md
+  - Inflación: inflacion.md
+  - Tendencia y pronósticos: pronosticos.md
+  - Rendimientos e inflación implícita: mercado.md
+  - Catálogo de alias: catalogo.md
+  - Referencia: referencia.md
+plugins:
+  - search: { lang: es }
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            heading_level: 3
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: false
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.arithmatex: { generic: true }
+  - toc: { permalink: true }
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js

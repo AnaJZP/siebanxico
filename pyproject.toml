@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "siebanxico"
+dynamic = ["version"]
+description = "Cliente no oficial en Python para la API del SIE de Banco de México: descarga de series y transformaciones para análisis económico."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Ana Lorena Jiménez Preciado" }]  # ESE - IPN
+keywords = ["banxico", "sie", "inflacion", "series de tiempo", "economia", "mexico"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Natural Language :: Spanish",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+]
+dependencies = [
+    "requests>=2.28",
+    "pandas>=2.2",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# Desestacionalización, pruebas de raíz unitaria y gráficas
+analisis = ["statsmodels>=0.14", "matplotlib>=3.7"]
+dev = ["pytest>=8", "ruff>=0.6", "statsmodels>=0.14", "matplotlib>=3.7"]
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
+
+[project.urls]
+Repositorio = "https://github.com/AnaJZP/BanxicoLab"
+Documentacion = "https://github.com/AnaJZP/BanxicoLab/tree/main/docs"
+Problemas = "https://github.com/AnaJZP/BanxicoLab/issues"
+
+[project.scripts]
+siebanxico = "siebanxico.cli:main"
+
+[tool.hatch.version]
+path = "src/siebanxico/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/siebanxico"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "red: pruebas que consultan el catálogo público de Banxico (sin token)",
+    "token: pruebas que requieren un token real en BANXICO_TOKEN",
+]
+addopts = "-m 'not red and not token'"
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+# Los notebooks son material de clase: ruff no debe reformatearlos
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
