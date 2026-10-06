@@ -35,6 +35,15 @@ Las fechas aceptan cualquier formato que entienda pandas (`"2020"`,
     en los días sin dato mensual. Lo más limpio es descargarlas por separado y
     unirlas después de [`a_mensual`](transformaciones.md#de-diario-a-mensual).
 
+### Un tema completo
+
+```python
+sie.descargar(tema="tipo_de_cambio", inicio="2020-01-01")
+```
+
+Los temas son `precios`, `expectativas`, `tipo_de_cambio`, `tasas`, `actividad`,
+`externo` y `dinero`; ver el [catálogo](catalogo.md).
+
 ### Variaciones calculadas por Banxico
 
 ```python
@@ -46,6 +55,28 @@ sie.descargar("inpc", "2020-01-01", incremento="anual")
 | `"mensual"` | la observación anterior |
 | `"anual"` | la misma observación del año anterior |
 | `"acumulado"` | la última observación del año anterior |
+
+## Panel mensual
+
+`panel` descarga y deja todo en frecuencia mensual, fechado al día 1:
+
+```python
+sie.panel(["inpc", "igae", "fix", "tasa_objetivo", "cetes_28"], "2000-01-01")
+```
+
+Cada serie se agrega con la regla de su ficha en el catálogo: `ultimo` para
+precios y saldos, `promedio` para tasas, y promedio de las dos quincenas para
+los índices quincenales (así se define el INPC mensual). Las series que ya son
+mensuales solo se alinean.
+
+Para una clave que no está en el catálogo la regla por omisión es `ultimo`; con
+`como` se cambia la de cualquier columna:
+
+```python
+sie.panel({"SF43718": "FIX", "SF43773": "fondeo"}, como={"fondeo": "promedio"})
+```
+
+La regla aplicada queda en `df.attrs["agregacion"]`.
 
 ### `serie`
 
@@ -59,6 +90,8 @@ fix = sie.serie("fix", "2020-01-01")
 
 ```python
 sie.catalogo()  # alias incluidos en la librería
+sie.catalogo("tasas")  # solo un tema
+sie.catalogo(buscar="cetes")  # por texto
 sie.buscar("subyacente")  # busca en el catálogo de Banxico; no usa token
 sie.info("SP74625")  # ficha de una serie; no usa token
 sie.metadatos(["inpc", "fix"])  # incluye fecha de inicio y fin; usa token
@@ -121,6 +154,14 @@ una advertencia y esas columnas quedan en `NaN`.
 
 ```bash
 siebanxico descargar inpc fix --inicio 2020-01-01 -o datos.csv
+```
+
+```bash
+siebanxico descargar --tema tasas --mensual --inicio 2015-01-01 -o tasas.csv
+```
+
+```bash
+siebanxico catalogo precios
 ```
 
 ```bash

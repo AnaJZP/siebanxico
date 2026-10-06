@@ -16,6 +16,10 @@ Todo se importa desde el paquete: `import siebanxico as sie`.
 
 ::: siebanxico.catalogo
 
+Las funciones `descargar`, `panel`, `serie`, `metadatos`, `oportuno`, `buscar` e
+`info` existen también a nivel de módulo (`sie.descargar(...)`), con los mismos
+parámetros que los métodos de `Banxico`.
+
 ## Frecuencia y diagnóstico
 
 ::: siebanxico.frecuencia

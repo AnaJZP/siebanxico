@@ -35,8 +35,14 @@ Series = str | Iterable[str] | Mapping[str, str]
 Fecha = str | pd.Timestamp | Any
 
 
-def _resolver_series(series: Series) -> dict[str, str]:
+def _resolver_series(series: Series | None, tema: str | None = None) -> dict[str, str]:
     """Normaliza la entrada del usuario a ``{id_serie: nombre_de_columna}``."""
+    if tema is not None:
+        if series is not None:
+            raise ValueError("Indica series o tema, no ambos.")
+        series = _catalogo.de_tema(tema)
+    if series is None:
+        raise ValueError("Debes indicar al menos una serie o un tema.")
     if isinstance(series, str):
         pares: Iterable[tuple[str, str | None]] = [(series, None)]
     elif isinstance(series, Mapping):
@@ -222,13 +228,17 @@ class Banxico:
 
     def descargar(
         self,
-        series: Series,
+        series: Series | None = None,
         inicio: Fecha | None = None,
         fin: Fecha | None = None,
         *,
+        tema: str | None = None,
         incremento: str | None = None,
     ) -> pd.DataFrame:
         """Descarga una o varias series y las devuelve alineadas por fecha.
+
+        Hay tres formas de decir qué se quiere: por clave del SIE, por alias
+        del catálogo o un tema completo.
 
         Parameters
         ----------
@@ -236,6 +246,9 @@ class Banxico:
             Identificadores del SIE (``"SF43718"``), alias del catálogo
             (``"fix"``) o un diccionario ``{clave: nombre_de_columna}``. No hay
             límite de 20 series: la consulta se parte en lotes automáticamente.
+        tema : str, opcional
+            En lugar de ``series``, todas las del catálogo de un tema
+            (``"tasas"``, ``"tipo_de_cambio"``…); ver :func:`siebanxico.catalogo`.
         inicio, fin : fecha, opcional
             Cualquier cosa que entienda ``pandas.Timestamp``. Si se omiten ambas
             se descarga la historia completa; si falta ``fin`` se usa hoy.
@@ -259,7 +272,7 @@ class Banxico:
         SinDatos
             Si ninguna serie tiene observaciones en el periodo.
         """
-        nombres = _resolver_series(series)
+        nombres = _resolver_series(series, tema)
         params = {}
         if incremento is not None:
             if incremento not in INCREMENTOS:
@@ -308,6 +321,71 @@ class Banxico:
         df.index.name = "fecha"
         df.attrs["series"] = info
         return df
+
+    def panel(
+        self,
+        series: Series | None = None,
+        inicio: Fecha | None = None,
+        fin: Fecha | None = None,
+        *,
+        tema: str | None = None,
+        como: Mapping[str, str] | None = None,
+    ) -> pd.DataFrame:
+        """Panel **mensual** listo para analizar, aunque las series tengan frecuencias distintas.
+
+        Descarga las series y lleva a frecuencia mensual las diarias, semanales
+        y quincenales, cada una con la regla que le corresponde según el
+        catálogo: último dato para precios y saldos, promedio para tasas, suma
+        para flujos. Evita tener que descargar por grupos y agregar a mano.
+
+        Parameters
+        ----------
+        series, inicio, fin, tema
+            Igual que en :meth:`descargar`.
+        como : dict, opcional
+            ``{columna: regla}`` para cambiar la regla de alguna serie o fijar
+            la de una clave que no está en el catálogo (por omisión,
+            ``"ultimo"``). Reglas: ``"ultimo"``, ``"promedio"``, ``"suma"``,
+            ``"primero"``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Indexado al primer día de cada mes. La regla aplicada a cada columna
+            queda en ``df.attrs["agregacion"]``.
+
+        Examples
+        --------
+        >>> import siebanxico as sie
+        >>> sie.panel(["inpc", "fix", "tasa_objetivo"], "2015-01-01")   # doctest: +SKIP
+        """
+        from .transformaciones import a_mensual, frecuencia
+
+        nombres = _resolver_series(series, tema)
+        como = dict(como or {})
+        sobran = set(como) - set(nombres.values())
+        if sobran:
+            raise ValueError(f"`como` menciona columnas que no se pidieron: {sorted(sobran)}")
+        datos = self.descargar(nombres, inicio, fin)
+
+        columnas, reglas = {}, {}
+        for id_serie, nombre in nombres.items():
+            s = datos[nombre].dropna()
+            conocida = _catalogo.POR_ID.get(id_serie)
+            regla = como.get(nombre) or (conocida.agregacion if conocida else "ultimo")
+            if conocida:
+                periodicidad = conocida.periodicidad
+            else:
+                periodicidad = frecuencia(s) if len(s) >= 3 else "Mensual"
+            if periodicidad in ("Mensual", "Trimestral", "Anual") and nombre not in como:
+                regla = "ultimo"  # ya hay a lo más un dato por mes: solo se alinea la fecha
+            columnas[nombre] = a_mensual(s, regla) if len(s) else s
+            reglas[nombre] = regla
+        tabla = pd.DataFrame(columnas).dropna(how="all")
+        tabla.index.name = "fecha"
+        tabla.attrs["series"] = datos.attrs["series"]
+        tabla.attrs["agregacion"] = reglas
+        return tabla
 
     def serie(
         self,
@@ -458,14 +536,27 @@ def _cliente() -> Banxico:
 
 
 def descargar(
-    series: Series,
+    series: Series | None = None,
     inicio: Fecha | None = None,
     fin: Fecha | None = None,
     *,
+    tema: str | None = None,
     incremento: str | None = None,
 ) -> pd.DataFrame:
     """Atajo de :meth:`Banxico.descargar` con el cliente compartido."""
-    return _cliente().descargar(series, inicio, fin, incremento=incremento)
+    return _cliente().descargar(series, inicio, fin, tema=tema, incremento=incremento)
+
+
+def panel(
+    series: Series | None = None,
+    inicio: Fecha | None = None,
+    fin: Fecha | None = None,
+    *,
+    tema: str | None = None,
+    como: Mapping[str, str] | None = None,
+) -> pd.DataFrame:
+    """Atajo de :meth:`Banxico.panel` con el cliente compartido."""
+    return _cliente().panel(series, inicio, fin, tema=tema, como=como)
 
 
 def serie(

@@ -7,7 +7,7 @@
 Librería no oficial; no está afiliada a Banco de México.
 """
 
-from .alias import CATALOGO, catalogo
+from .alias import CATALOGO, TEMAS, catalogo
 from .cliente import (
     Banxico,
     buscar,
@@ -15,6 +15,7 @@ from .cliente import (
     info,
     metadatos,
     oportuno,
+    panel,
     serie,
 )
 from .diagnostico import diagnostico, prueba_adf
@@ -55,9 +56,11 @@ from .transformaciones import (
     variacion_anual,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
+    "TEMAS",
+    "panel",
     "rendimiento_bono",
     "precio_bono",
     "inflacion_implicita_forward",

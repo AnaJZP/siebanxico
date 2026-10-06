@@ -226,3 +226,69 @@ def test_variacion_anual_quincenal():
     s = pd.Series(100 * 1.002 ** np.arange(60), index=fechas)
     assert sie.frecuencia(s) == "Quincenal"
     assert np.allclose(sie.variacion_anual(s).dropna(), (1.002**24 - 1) * 100)
+
+
+def test_catalogo_por_tema_y_busqueda():
+    assert set(sie.catalogo()["tema"]) == set(sie.TEMAS)
+    assert sie.catalogo("Tipo de cambio").index.tolist()[0] == "fix"
+    assert "inflacion_anual" in sie.catalogo(buscar="INFLACIÓN").index
+    assert sie.catalogo("tasas", buscar="cetes").index.tolist() == ["cetes_28", "cetes_91"]
+    assert sie.catalogo(buscar="no existe").empty
+    with pytest.raises(ValueError, match="precios"):
+        sie.catalogo("clima")
+    assert len({s.id for s in sie.CATALOGO.values()}) == len(sie.CATALOGO)  # sin claves repetidas
+
+
+def test_descargar_un_tema():
+    def responder(url, p):
+        pedidas = url.split("/series/")[1].split("/")[0].split(",")
+        return bmx(*[serie_json(i, [("01/01/2020", "1.0")]) for i in pedidas])
+
+    bmx_, _ = cliente(responder)
+    assert list(bmx_.descargar(tema="dinero").columns) == ["m1", "m2"]
+    with pytest.raises(ValueError, match="no ambos"):
+        bmx_.descargar("inpc", tema="dinero")
+    with pytest.raises(ValueError, match="serie o un tema"):
+        bmx_.descargar()
+
+
+def test_panel_mensual_usa_la_regla_del_catalogo():
+    dias = pd.bdate_range("2020-01-01", "2020-03-31")
+    quincenas = [f"{d:02d}/{m:02d}/2020" for m in (1, 2, 3) for d in (1, 16)]
+    series = {
+        "SP1": [(f"01/{m:02d}/2020", str(100 + m)) for m in (1, 2, 3)],
+        "SF43718": [(f.strftime("%d/%m/%Y"), str(18 + i / 100)) for i, f in enumerate(dias)],
+        "SF61745": [(f.strftime("%d/%m/%Y"), "7.0" if f.month < 3 else "6.5") for f in dias],
+        "SP8664": [(q, str(100 + i)) for i, q in enumerate(quincenas)],
+        "SF99": [(f.strftime("%d/%m/%Y"), str(float(i))) for i, f in enumerate(dias)],
+    }
+
+    def responder(url, p):
+        pedidas = url.split("/series/")[1].split("/")[0].split(",")
+        return bmx(*[serie_json(i, series[i]) for i in pedidas])
+
+    bmx_, sesion = cliente(responder)
+    tabla = bmx_.panel(["inpc", "fix", "tasa_objetivo", "inpc_quincenal", "SF99"], "2020-01-01")
+
+    assert list(tabla.index) == list(pd.date_range("2020-01-01", periods=3, freq="MS"))
+    assert tabla["inpc"].tolist() == [101.0, 102.0, 103.0]
+    enero = dias[dias.month == 1]
+    assert tabla["fix"].iloc[0] == pytest.approx(18 + (len(enero) - 1) / 100)  # cierre del mes
+    assert tabla["tasa_objetivo"].tolist() == [7.0, 7.0, 6.5]  # promedio
+    assert tabla["inpc_quincenal"].tolist() == [100.5, 102.5, 104.5]  # promedio de dos quincenas
+    assert tabla["SF99"].iloc[0] == len(enero) - 1  # fuera del catálogo: último
+    assert tabla.attrs["agregacion"]["tasa_objetivo"] == "promedio"
+    assert len(sesion.llamadas) == 1
+
+    propia = bmx_.panel({"SF99": "x"}, "2020-01-01", como={"x": "promedio"})
+    assert propia["x"].iloc[0] == pytest.approx((len(enero) - 1) / 2)
+    with pytest.raises(ValueError, match="no se pidieron"):
+        bmx_.panel("fix", como={"otra": "promedio"})
+
+
+def test_el_readme_lista_todo_el_catalogo():
+    from pathlib import Path
+
+    readme = (Path(__file__).parents[1] / "README.md").read_text(encoding="utf-8")
+    for alias, entrada in sie.CATALOGO.items():
+        assert f"| `{alias}` | `{entrada.id}` |" in readme, alias

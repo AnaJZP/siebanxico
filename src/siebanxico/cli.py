@@ -24,7 +24,8 @@ def _parser() -> argparse.ArgumentParser:
     t = sub.add_parser("token", help="guarda tu token de forma segura (no se muestra al escribir)")
     t.add_argument("--borrar", action="store_true", help="elimina el token guardado")
 
-    sub.add_parser("catalogo", help="lista los alias de series disponibles")
+    c = sub.add_parser("catalogo", help="lista los alias de series disponibles")
+    c.add_argument("tema", nargs="?", help="precios, tasas, tipo_de_cambio…")
 
     b = sub.add_parser("buscar", help="busca series por texto (no requiere token)")
     b.add_argument("texto")
@@ -33,7 +34,11 @@ def _parser() -> argparse.ArgumentParser:
     m.add_argument("series", nargs="+")
 
     d = sub.add_parser("descargar", help="descarga series a CSV")
-    d.add_argument("series", nargs="+", help="identificadores (SF43718) o alias (fix)")
+    d.add_argument("series", nargs="*", help="identificadores (SF43718) o alias (fix)")
+    d.add_argument("--tema", help="en lugar de series: todo un tema del catálogo")
+    d.add_argument(
+        "--mensual", action="store_true", help="panel mensual con la regla de cada serie"
+    )
     d.add_argument("--inicio", help="AAAA-MM-DD")
     d.add_argument("--fin", help="AAAA-MM-DD")
     d.add_argument("--incremento", choices=["mensual", "anual", "acumulado"])
@@ -52,18 +57,26 @@ def main(argv: list[str] | None = None) -> int:
                 guardar_token()
                 print(f"Token guardado en {ruta_token()} (solo legible por tu usuario).")
         elif args.comando == "catalogo":
-            print(catalogo().to_string())
+            print(catalogo(args.tema).to_string())
         elif args.comando == "buscar":
             print(Banxico().buscar(args.texto, limite=None).to_string(index=False))
         elif args.comando == "metadatos":
             print(Banxico().metadatos(args.series).to_string())
         elif args.comando == "descargar":
-            df = Banxico().descargar(args.series, args.inicio, args.fin, incremento=args.incremento)
+            bmx, series = Banxico(), args.series or None
+            if args.mensual:
+                if args.incremento:
+                    raise ValueError("--mensual e --incremento no se pueden combinar.")
+                df = bmx.panel(series, args.inicio, args.fin, tema=args.tema)
+            else:
+                df = bmx.descargar(
+                    series, args.inicio, args.fin, tema=args.tema, incremento=args.incremento
+                )
             if args.salida:
-                df.to_csv(args.salida)
+                df.to_csv(args.salida, float_format="%.10g")
                 print(f"{len(df):,} filas × {df.shape[1]} series → {args.salida}", file=sys.stderr)
             else:
-                df.to_csv(sys.stdout)
+                df.to_csv(sys.stdout, float_format="%.10g")
     except (BanxicoError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1

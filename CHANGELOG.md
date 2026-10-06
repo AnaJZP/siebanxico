@@ -1,5 +1,13 @@
 # Cambios
 
+## 0.3.0 — 2026-10-06
+
+- `panel`: descarga y deja las series en frecuencia mensual con la regla de agregación del catálogo.
+- `descargar(tema=...)` y `panel(tema=...)`: un tema completo del catálogo.
+- `catalogo(tema, buscar=...)`: el catálogo ahora está organizado por temas y se puede filtrar.
+- Los índices quincenales se agregan a mensual por promedio, como define el INPC.
+- Terminal: `siebanxico catalogo [tema]`, `siebanxico descargar --tema ... --mensual`.
+
 ## 0.2.0 — 2026-10-06
 
 - `Banxico.inflacion_implicita`: rendimientos diarios de Bonos M y Udibonos e inflación implícita.
